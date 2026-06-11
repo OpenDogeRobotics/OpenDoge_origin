@@ -31,7 +31,7 @@ ROS2 机器人描述包，包含：
 - 关节/连杆映射表（`Opendoge.csv`）
 - 可用于 Isaac Gym、Mujoco 等仿真器的模型导入
 
-### [OpenDoge_firmware](OpenDoge_firmware/)
+### [OpenDoge_firmware]([OpenDoge_firmware/](https://github.com/OpenDogeRobotics/OpenDoge_firmware))
 基于 ROS2 Humble 的上位机运控工作区，包含：
 - `motor_control`：CAN 总线电机驱动接口
 - `dm_imu`：IMU 传感器驱动
