@@ -18,20 +18,20 @@ OpenDoge/
 
 ## 各模块说明
 
-### [OpenDoge_hardware](OpenDoge_hardware/)
+### [OpenDoge_hardware](https://github.com/OpenDogeRobotics/OpenDoge_hardware)
 机械结构设计文件，包含：
 - 整机装配体 STEP 文件（`全零件.STEP`、`全子装配.STEP`）
 - 405 个 SolidWorks 零件文件（`OpenDog/` 目录下）
 - 适用于 3D 打印与 CNC 加工的结构件设计
 
-### [OpenDoge_description](OpenDoge_description/)
+### [OpenDoge_description](https://github.com/OpenDogeRobotics/OpenDoge_description)
 ROS2 机器人描述包，包含：
 - URDF 格式的机器人运动学与动力学模型（`Opendoge.urdf`）
 - 各连杆与关节的 STL 网格文件（`meshes/` 目录）
 - 关节/连杆映射表（`Opendoge.csv`）
 - 可用于 Isaac Gym、Mujoco 等仿真器的模型导入
 
-### [OpenDoge_firmware]([OpenDoge_firmware/](https://github.com/OpenDogeRobotics/OpenDoge_firmware))
+### [OpenDoge_firmware](https://github.com/OpenDogeRobotics/OpenDoge_firmware)
 基于 ROS2 Humble 的上位机运控工作区，包含：
 - `motor_control`：CAN 总线电机驱动接口
 - `dm_imu`：IMU 传感器驱动
@@ -41,7 +41,7 @@ ROS2 机器人描述包，包含：
 
 支持电机力矩/位置/速度控制，IMU 数据采集，与强化学习策略的实时推理部署。
 
-### [OpenDoge_train](OpenDoge_train/)
+### [OpenDoge_train](https://github.com/OpenDogeRobotics/OpenDoge_train)
 基于 Isaac Gym 的强化学习训练框架，衍生自 [HIMLoco](https://github.com/InternRobotics/HIMLoco) 与 [galileo-isaacgym](https://github.com/Hahalim2022y/galileo_isaacgym)，包含：
 - **训练（Train）**：支持多种机器人配置的并行训练，可调节环境数量、随机种子、迭代次数等
 - **演示（Play）**：加载训练好的模型进行仿真演示，支持导出 ONNX 策略网络
@@ -49,7 +49,7 @@ ROS2 机器人描述包，包含：
 - **Sim2Real**：通过 LCM 通信协议将策略部署到真实机器人
 - **Dashboard**：基于 Web 的训练监控与策略部署面板
 
-### [OpenDoge_deploy](OpenDoge_deploy/)
+### [OpenDoge_deploy](https://github.com/OpenDogeRobotics/OpenDoge_deploy)
 策略部署与迁移仓库，负责将训练好的强化学习策略部署到真实机器人上，包括：
 - ONNX 模型推理与运行时管理
 - Sim2Real 策略迁移与适配
