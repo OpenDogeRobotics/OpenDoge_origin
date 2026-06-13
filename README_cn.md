@@ -1,5 +1,7 @@
 # OpenDoge
 
+[English](README.md)
+
 OpenDoge 是一款开源的小型四足机器人项目，涵盖从机械结构设计、URDF 仿真描述、嵌入式固件控制到强化学习训练与实机部署的全栈开发。目标是打造一套低成本、可复现、端到端的四足机器人开发方案。
 
 ![OpenDoge](assets/mmexport1765721320399.jpg)

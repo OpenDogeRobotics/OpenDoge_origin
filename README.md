@@ -1,5 +1,7 @@
 # OpenDoge
 
+[中文版本](README_cn.md)
+
 OpenDoge is an open-source small quadruped robot project, covering full-stack development from mechanical structure design, URDF simulation description, embedded firmware control, to reinforcement learning (RL) training and real-world deployment. The goal is to create a low-cost, reproducible, end-to-end quadruped robot development solution.
 
 ![OpenDoge](assets/mmexport1765721320399.jpg)
@@ -171,6 +173,11 @@ OpenDoge_train/
 ├── Tool/
 │   ├── check_urdf.py                  # URDF validation utility
 │   └── simplify_mesh.py               # Mesh decimation utility
+├── tools/
+│   └── mujoco_ik/                     # IK gait controller & reference motion recorder
+│       ├── opendoge_mujoco/            # IK solver, IMU feedback, gait planner
+│       ├── scripts/                    # PD control & keyboard IK demos
+│       └── configs/
 ├── scripts/export_onnx.py             # Standalone ONNX export
 ├── onnx/                              # Exported ONNX policy models
 ├── docs/                              # Training tuning records
@@ -224,10 +231,6 @@ OpenDoge_deploy/
 │       ├── deploy_opendoge_xbox.py     # Xbox gamepad-controlled Sim2Sim
 │       ├── onnx_path_utils.py          # ONNX model path resolution
 │       └── configs/opendoge.yaml       # Deployment config (PD gains, observation scaling)
-├── mujoco/                             # Traditional control methods (IK, position control)
-│   ├── opendoge_mujoco/                # IK solver, IMU feedback, gait controller
-│   ├── scripts/                        # Keyboard IK control, position control demos
-│   └── configs/
 ├── onnx/                               # ONNX policy models
 │   ├── flat_opendoge_9000_omni.onnx    # Omnidirectional policy, 9000 iterations (recommended)
 │   ├── flat_opendoge_fresh_6000.onnx   # Fresh policy, 6000 iterations
