@@ -13,8 +13,7 @@ OpenDoge/
 ├── OpenDoge_hardware/       # Mechanical structure design & component datasheets
 ├── OpenDoge_description/    # URDF/Xacro robot description files (ROS/ROS2)
 ├── OpenDoge_firmware/       # Standalone C++ real-machine deployment & Python tooling
-├── OpenDoge_train/          # Isaac Gym RL training framework (derived from HIMLoco)
-├── OpenDoge_deploy/         # MuJoCo Sim2Sim verification & policy transfer
+├── OpenDoge_train/          # Isaac Gym RL training, MuJoCo Sim2Sim, ONNX export & deployment
 └── OpenDoge_origin/         # Main repository (this repo) — documentation & project overview
 ```
 
@@ -144,7 +143,7 @@ can3: RR  (motors 10/11/12 = hip/thigh/calf)
 
 ### [OpenDoge_train](https://github.com/OpenDogeRobotics/OpenDoge_train)
 
-Isaac Gym-based RL training framework derived from [HIMLoco](https://github.com/InternRobotics/HIMLoco).
+Isaac Gym-based RL training framework derived from [HIMLoco](https://github.com/InternRobotics/HIMLoco), plus MuJoCo Sim2Sim verification, ONNX policy export, and real-robot deployment tooling.
 
 ```
 OpenDoge_train/
@@ -166,20 +165,28 @@ OpenDoge_train/
 │       ├── runners/                   # HIMOnPolicyRunner
 │       └── storage/                   # HIMRolloutStorage
 ├── deploy/
-│   ├── deploy_mujoco/                 # MuJoCo Sim2Sim scripts & configs
+│   ├── deploy_mujoco/                 # MuJoCo Sim2Sim verification
+│   │   ├── deploy_opendoge.py         # Keyboard-controlled Sim2Sim
+│   │   ├── deploy_opendoge_xbox.py    # Xbox gamepad-controlled Sim2Sim
+│   │   ├── onnx_path_utils.py         # ONNX model path resolution
+│   │   └── configs/opendoge.yaml      # Deployment config (PD gains, observation scaling)
 │   ├── deploy_real/                   # Real-robot deployment (Unitree Go2/G1/H1)
 │   └── pre_train/                     # Pre-trained model weights
 ├── resources/robots/Opendoge/         # OpenDoge URDF + MuJoCo XML + STL meshes
-├── Tool/
-│   ├── check_urdf.py                  # URDF validation utility
-│   └── simplify_mesh.py               # Mesh decimation utility
 ├── tools/
 │   └── mujoco_ik/                     # IK gait controller & reference motion recorder
 │       ├── opendoge_mujoco/            # IK solver, IMU feedback, gait planner
 │       ├── scripts/                    # PD control & keyboard IK demos
 │       └── configs/
+├── Tool/
+│   ├── check_urdf.py                  # URDF validation utility
+│   └── simplify_mesh.py               # Mesh decimation utility
 ├── scripts/export_onnx.py             # Standalone ONNX export
 ├── onnx/                              # Exported ONNX policy models
+│   ├── flat_opendoge_9000_omni.onnx    # Omnidirectional policy, 9000 iterations (recommended)
+│   ├── flat_opendoge_fresh_6000.onnx   # Fresh policy, 6000 iterations
+│   ├── flat_opendoge_5700.onnx         # Gen4-style policy, 5700 iterations
+│   └── flat_opendoge_gen52_4800.onnx   # Gen52 policy, 4800 iterations
 ├── docs/                              # Training tuning records
 ├── setup.py
 ├── himloco.yml                        # Conda environment specification
@@ -205,41 +212,13 @@ python legged_gym/scripts/train.py --task=opendoge --headless --num_envs=4096
 python legged_gym/scripts/train.py --task=opendoge --resume --load_run <run_name> --checkpoint <N>
 ```
 
-**Playback & export:**
+**Playback & ONNX export:**
 ```bash
 python legged_gym/scripts/play.py --task=opendoge --load_run <run_name>
 # ONNX model saved to onnx/ directory
 ```
 
-**Key features:**
-- **Curriculum learning:** progressive training from standing to dynamic locomotion
-- **Domain randomization:** friction, motor strength, payload, external pushes, PD randomization
-- **RNN policy:** LSTM-based Actor-Critic for memory-dependent gait patterns
-- **Multi-robot support:** OpenDoge, Unitree A1/Go1/Go2, H1/H1_2, G1, ZSL1
-- **Sim2Sim export:** MuJoCo XML + ONNX policy for deployment verification
-- **TensorBoard monitoring:** full scalar logging for all reward components
-
-### [OpenDoge_deploy](https://github.com/OpenDogeRobotics/OpenDoge_deploy)
-
-MuJoCo-based Sim2Sim verification and policy deployment validation.
-
-```
-OpenDoge_deploy/
-├── deploy/
-│   └── deploy_mujoco/
-│       ├── deploy_opendoge.py          # Keyboard-controlled Sim2Sim
-│       ├── deploy_opendoge_xbox.py     # Xbox gamepad-controlled Sim2Sim
-│       ├── onnx_path_utils.py          # ONNX model path resolution
-│       └── configs/opendoge.yaml       # Deployment config (PD gains, observation scaling)
-├── onnx/                               # ONNX policy models
-│   ├── flat_opendoge_9000_omni.onnx    # Omnidirectional policy, 9000 iterations (recommended)
-│   ├── flat_opendoge_fresh_6000.onnx   # Fresh policy, 6000 iterations
-│   ├── flat_opendoge_5700.onnx         # Gen4-style policy, 5700 iterations
-│   └── flat_opendoge_gen52_4800.onnx   # Gen52 policy, 4800 iterations
-└── resources/robots/Opendoge/          # MJCF model + STL meshes
-```
-
-**Quick start:**
+**Sim2Sim verification:**
 ```bash
 conda activate himloco
 # Keyboard control
@@ -250,16 +229,26 @@ python deploy/deploy_mujoco/deploy_opendoge_xbox.py
 python deploy/deploy_mujoco/deploy_opendoge.py --onnx onnx/flat_opendoge_9000_omni.onnx
 ```
 
-**PD parameter alignment (deploy ↔ train):**
+**PD parameter alignment (train ↔ real):**
 
-| Parameter | Deploy Value | Train Value |
-|-----------|-------------|-------------|
-| kp | 12.0 | 12.0 |
-| kd | 0.5 | 0.5 |
-| action_scale | 0.30 | 0.30 |
-| control_decimation | 2 (100 Hz) | 2 (100 Hz) |
-| simulation_dt | 0.005 (200 Hz) | 0.005 (200 Hz) |
-| init_base_height | 0.15 m | 0.15 m |
+| Parameter | Value |
+|-----------|-------|
+| kp | 12.0 |
+| kd | 0.5 |
+| action_scale | 0.30 |
+| control_decimation | 2 (100 Hz policy) |
+| simulation_dt | 0.005 (200 Hz physics) |
+| init_base_height | 0.15 m |
+
+**Key features:**
+- **Curriculum learning:** progressive training from standing to dynamic locomotion
+- **Domain randomization:** friction, motor strength, payload, external pushes, PD randomization
+- **RNN policy:** LSTM-based Actor-Critic for memory-dependent gait patterns
+- **Multi-robot support:** OpenDoge, Unitree A1/Go1/Go2, H1/H1_2, G1, ZSL1
+- **Sim2Sim verification:** MuJoCo-based policy validation with keyboard or gamepad control before real-robot deployment
+- **ONNX export:** PyTorch → ONNX conversion for CPU inference on the real robot
+- **Pre-trained models:** ready-to-deploy ONNX policies included
+- **TensorBoard monitoring:** full scalar logging for all reward components
 
 ## Tech Stack
 
@@ -299,11 +288,14 @@ pip install -e .
 python legged_gym/scripts/train.py --task=opendoge --headless --num_envs=4096
 ```
 
-### Sim2Sim Verification
+### Sim2Sim Verification & ONNX Export
 ```bash
-cd OpenDoge_deploy
+cd OpenDoge_train
 conda activate himloco
+# Verify trained policy in MuJoCo
 python deploy/deploy_mujoco/deploy_opendoge.py --onnx onnx/flat_opendoge_9000_omni.onnx
+# Export new ONNX model from checkpoint
+python legged_gym/scripts/play.py --task=opendoge --load_run <run_name>
 ```
 
 ### Real Robot Deployment
@@ -330,7 +322,7 @@ POLICY_PATH=policy/gen52_model4800.onnx ./scripts/start_robot.sh policy
 - [x] **URDF Model:** Full kinematic/dynamic model with STL meshes, RViz & Gazebo support
 - [x] **Firmware:** Standalone C++ deployment with ONNX inference, SocketCAN, safety damping
 - [x] **Training Pipeline:** Isaac Gym PPO training with curriculum learning & domain randomization
-- [x] **Sim2Sim:** MuJoCo policy verification with keyboard/gamepad control
+- [x] **Sim2Sim:** MuJoCo policy verification with keyboard/gamepad control (integrated into train)
 - [ ] **OpenDoge-specific training config:** Dedicated task tuned for the actual hardware
 - [ ] **Real-machine walking:** First stable locomotion on physical robot
 - [ ] **Gait library:** Multiple gaits (trot, walk, bound, pace) with switching

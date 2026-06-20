@@ -13,8 +13,7 @@ OpenDoge/
 ├── OpenDoge_hardware/       # 机械结构设计 & 器件规格书
 ├── OpenDoge_description/    # URDF/Xacro 机器人描述文件 (ROS/ROS2)
 ├── OpenDoge_firmware/       # 独立 C++ 实机部署 & Python 工具链
-├── OpenDoge_train/          # Isaac Gym 强化学习训练框架 (衍生自 HIMLoco)
-├── OpenDoge_deploy/         # MuJoCo Sim2Sim 验证 & 策略迁移
+├── OpenDoge_train/          # Isaac Gym RL 训练、MuJoCo Sim2Sim、ONNX 导出与部署
 └── OpenDoge_origin/         # 主仓库（本仓库）— 文档与项目总览
 ```
 
@@ -144,7 +143,7 @@ can3: 右后 RR, 电机 10/11/12 = hip/thigh/calf
 
 ### [OpenDoge_train](https://github.com/OpenDogeRobotics/OpenDoge_train)
 
-基于 Isaac Gym 的强化学习训练框架，衍生自 [HIMLoco](https://github.com/InternRobotics/HIMLoco)。
+基于 Isaac Gym 的强化学习训练框架（衍生自 [HIMLoco](https://github.com/InternRobotics/HIMLoco)），同时包含 MuJoCo Sim2Sim 验证、ONNX 策略导出与实机部署工具。
 
 ```
 OpenDoge_train/
@@ -166,15 +165,28 @@ OpenDoge_train/
 │       ├── runners/                   # HIMOnPolicyRunner
 │       └── storage/                   # HIMRolloutStorage
 ├── deploy/
-│   ├── deploy_mujoco/                 # MuJoCo Sim2Sim 脚本 & 配置
+│   ├── deploy_mujoco/                 # MuJoCo Sim2Sim 验证
+│   │   ├── deploy_opendoge.py         # 键盘控制 Sim2Sim
+│   │   ├── deploy_opendoge_xbox.py    # Xbox 手柄控制 Sim2Sim
+│   │   ├── onnx_path_utils.py         # ONNX 模型路径解析
+│   │   └── configs/opendoge.yaml      # 部署配置（PD 增益、观测缩放等）
 │   ├── deploy_real/                   # 实机部署（Unitree Go2/G1/H1）
 │   └── pre_train/                     # 预训练模型权重
 ├── resources/robots/Opendoge/         # OpenDoge URDF + MuJoCo XML + STL 网格
+├── tools/
+│   └── mujoco_ik/                     # IK 步态控制器 & 参考运动录制
+│       ├── opendoge_mujoco/            # IK 求解器、IMU 反馈、步态规划器
+│       ├── scripts/                    # PD 控制 & 键盘 IK 演示
+│       └── configs/
 ├── Tool/
 │   ├── check_urdf.py                  # URDF 验证工具
 │   └── simplify_mesh.py               # 网格减面工具
 ├── scripts/export_onnx.py             # 独立 ONNX 导出脚本
 ├── onnx/                              # 导出的 ONNX 策略模型
+│   ├── flat_opendoge_9000_omni.onnx    # 全向策略，9000 轮（推荐）
+│   ├── flat_opendoge_fresh_6000.onnx   # Fresh 策略，6000 轮
+│   ├── flat_opendoge_5700.onnx         # Gen4 风格策略，5700 轮
+│   └── flat_opendoge_gen52_4800.onnx   # Gen52 策略，4800 轮
 ├── docs/                              # 训练调参记录
 ├── setup.py
 ├── himloco.yml                        # Conda 环境配置
@@ -200,45 +212,13 @@ python legged_gym/scripts/train.py --task=opendoge --headless --num_envs=4096
 python legged_gym/scripts/train.py --task=opendoge --resume --load_run <run_name> --checkpoint <N>
 ```
 
-**演示 & 导出：**
+**演示与 ONNX 导出：**
 ```bash
 python legged_gym/scripts/play.py --task=opendoge --load_run <run_name>
 # ONNX 模型保存至 onnx/ 目录
 ```
 
-**核心特性：**
-- **课程学习：** 从站立逐步过渡到动态行走的渐进式训练
-- **域随机化：** 摩擦力、电机力矩系数、负载、外力扰动、PD 参数随机化
-- **RNN 策略：** 基于 LSTM 的 Actor-Critic 架构，具备步态记忆能力
-- **多机器人支持：** OpenDoge、Unitree A1/Go1/Go2、H1/H1_2、G1、ZSL1
-- **Sim2Sim 导出：** MuJoCo XML + ONNX 策略用于部署前验证
-- **TensorBoard 监控：** 所有奖励分项的全量标量日志
-
-### [OpenDoge_deploy](https://github.com/OpenDogeRobotics/OpenDoge_deploy)
-
-基于 MuJoCo 的 Sim2Sim 策略验证与部署。
-
-```
-OpenDoge_deploy/
-├── deploy/
-│   └── deploy_mujoco/
-│       ├── deploy_opendoge.py          # 键盘控制 Sim2Sim
-│       ├── deploy_opendoge_xbox.py     # Xbox 手柄控制 Sim2Sim
-│       ├── onnx_path_utils.py          # ONNX 模型路径解析
-│       └── configs/opendoge.yaml       # 部署配置（PD 增益、观测缩放等）
-├── mujoco/                             # 传统控制方法（IK、位置控制）
-│   ├── opendoge_mujoco/                # IK 求解器、IMU 反馈、步态控制器
-│   ├── scripts/                        # 键盘 IK 控制、位置控制演示
-│   └── configs/
-├── onnx/                               # ONNX 策略模型
-│   ├── flat_opendoge_9000_omni.onnx    # 全向策略，9000 轮（推荐）
-│   ├── flat_opendoge_fresh_6000.onnx   # Fresh 策略，6000 轮
-│   ├── flat_opendoge_5700.onnx         # Gen4 风格策略，5700 轮
-│   └── flat_opendoge_gen52_4800.onnx   # Gen52 策略，4800 轮
-└── resources/robots/Opendoge/          # MJCF 模型 + STL 网格
-```
-
-**快速启动：**
+**Sim2Sim 验证：**
 ```bash
 conda activate himloco
 # 键盘控制
@@ -249,16 +229,26 @@ python deploy/deploy_mujoco/deploy_opendoge_xbox.py
 python deploy/deploy_mujoco/deploy_opendoge.py --onnx onnx/flat_opendoge_9000_omni.onnx
 ```
 
-**PD 参数对齐（部署 ↔ 训练）：**
+**PD 参数对齐（训练 ↔ 实机）：**
 
-| 参数 | 部署值 | 训练值 |
-|------|--------|--------|
-| kp | 12.0 | 12.0 |
-| kd | 0.5 | 0.5 |
-| action_scale | 0.30 | 0.30 |
-| control_decimation | 2 (100 Hz) | 2 (100 Hz) |
-| simulation_dt | 0.005 (200 Hz) | 0.005 (200 Hz) |
-| init_base_height | 0.15 m | 0.15 m |
+| 参数 | 值 |
+|------|-----|
+| kp | 12.0 |
+| kd | 0.5 |
+| action_scale | 0.30 |
+| control_decimation | 2（策略 100 Hz） |
+| simulation_dt | 0.005（物理 200 Hz） |
+| init_base_height | 0.15 m |
+
+**核心特性：**
+- **课程学习：** 从站立逐步过渡到动态行走的渐进式训练
+- **域随机化：** 摩擦力、电机力矩系数、负载、外力扰动、PD 参数随机化
+- **RNN 策略：** 基于 LSTM 的 Actor-Critic 架构，具备步态记忆能力
+- **多机器人支持：** OpenDoge、Unitree A1/Go1/Go2、H1/H1_2、G1、ZSL1
+- **Sim2Sim 验证：** MuJoCo 环境下使用键盘或手柄进行策略验证，作为实机部署前的安全关卡
+- **ONNX 导出：** PyTorch → ONNX 模型转换，用于实机 CPU 推理
+- **预训练模型：** 附带可直接部署的 ONNX 策略模型
+- **TensorBoard 监控：** 所有奖励分项的全量标量日志
 
 ## 技术栈
 
@@ -298,11 +288,14 @@ pip install -e .
 python legged_gym/scripts/train.py --task=opendoge --headless --num_envs=4096
 ```
 
-### Sim2Sim 验证
+### Sim2Sim 验证与 ONNX 导出
 ```bash
-cd OpenDoge_deploy
+cd OpenDoge_train
 conda activate himloco
+# 在 MuJoCo 中验证训练好的策略
 python deploy/deploy_mujoco/deploy_opendoge.py --onnx onnx/flat_opendoge_9000_omni.onnx
+# 从 checkpoint 导出 ONNX 模型
+python legged_gym/scripts/play.py --task=opendoge --load_run <run_name>
 ```
 
 ### 实机部署
@@ -329,7 +322,7 @@ POLICY_PATH=policy/gen52_model4800.onnx ./scripts/start_robot.sh policy
 - [x] **URDF 模型：** 完整运动学/动力学模型，STL 网格，RViz & Gazebo 支持
 - [x] **固件：** 独立 C++ 部署程序，ONNX 推理，SocketCAN，安全阻尼
 - [x] **训练管线：** Isaac Gym PPO 训练，课程学习，域随机化
-- [x] **Sim2Sim：** MuJoCo 策略验证，键盘/手柄遥控
+- [x] **Sim2Sim：** MuJoCo 策略验证，键盘/手柄遥控（已整合至 train）
 - [ ] **OpenDoge 专属训练配置：** 针对实际硬件调优的专用训练任务
 - [ ] **实机行走：** 物理机器人首次稳定行走
 - [ ] **步态库：** 多种步态（trot、walk、bound、pace）及切换
